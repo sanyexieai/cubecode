@@ -275,3 +275,205 @@ fn openai_compatible_response_falls_back_to_reasoning_content() {
 
     assert_eq!(message_content_to_string(choice.message), "reasoned answer");
 }
+
+struct MetadataEchoProvider;
+
+impl LlmProvider for MetadataEchoProvider {
+    fn info(&self) -> ProviderInfo {
+        ProviderInfo {
+            id: "echo-meta".to_owned(),
+            display_name: "Echo metadata".to_owned(),
+            supports_chat: true,
+            supports_streaming: false,
+        }
+    }
+
+    fn generate(&self, request: &GenerateRequest) -> Result<GenerateResponse, LlmError> {
+        let v = request
+            .metadata
+            .get("x-pipeline")
+            .cloned()
+            .unwrap_or_else(|| "none".to_owned());
+        Ok(GenerateResponse {
+            model: request.model.clone(),
+            message: ChatMessage::new(MessageRole::Assistant, v),
+            finish_reason: FinishReason::Stop,
+            usage: None,
+            raw: None,
+        })
+    }
+}
+
+struct StampPipelineNode;
+
+impl PipelineStage for StampPipelineNode {
+    fn id(&self) -> &'static str {
+        "stamp"
+    }
+
+    fn before_generate(&self, ctx: &mut PipelineContext) -> Result<(), LlmError> {
+        ctx.request
+            .metadata
+            .insert("x-pipeline".into(), "stamped".into());
+        Ok(())
+    }
+}
+
+#[test]
+fn pipeline_before_generate_can_mutate_request_for_provider() {
+    let mut registry = ProviderRegistry::new();
+    registry.register(MetadataEchoProvider);
+    registry.set_pipeline(Some(
+        Pipeline::builder().push(StampPipelineNode).build(),
+    ));
+
+    let request = GenerateRequest::new(
+        ModelRef::new("echo-meta", "m"),
+        vec![ChatMessage::new(MessageRole::User, "hi")],
+    );
+    let out = registry.generate(&request).expect("generate");
+    assert_eq!(out.message.content, "stamped");
+}
+
+#[test]
+fn pipeline_with_no_stages_behaves_like_no_pipeline() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let mut registry = ProviderRegistry::new();
+    registry.set_retry_policy(LlmRetryPolicy {
+        max_attempts: 2,
+        base_delay_ms: 0,
+        log_retries: false,
+    });
+    registry.set_pipeline(Some(Pipeline::builder().build()));
+    registry.register(RetryOnceProvider {
+        calls: calls.clone(),
+    });
+    let request = GenerateRequest::new(
+        ModelRef::new("retry-once", "mock"),
+        vec![ChatMessage::new(MessageRole::User, "hello")],
+    );
+
+    let response = registry.generate(&request).expect("retry should succeed");
+    assert_eq!(response.message.content, "ok");
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+}
+
+struct OkFlowProvider;
+
+impl LlmProvider for OkFlowProvider {
+    fn info(&self) -> ProviderInfo {
+        ProviderInfo {
+            id: "flow-ok".to_owned(),
+            display_name: "Flow Ok".to_owned(),
+            supports_chat: true,
+            supports_streaming: false,
+        }
+    }
+
+    fn generate(&self, request: &GenerateRequest) -> Result<GenerateResponse, LlmError> {
+        Ok(GenerateResponse {
+            model: request.model.clone(),
+            message: ChatMessage::new(MessageRole::Assistant, "from-llm"),
+            finish_reason: FinishReason::Stop,
+            usage: None,
+            raw: None,
+        })
+    }
+}
+
+struct PassThroughLlmFlowNode;
+
+impl FlowNode for PassThroughLlmFlowNode {
+    fn id(&self) -> &'static str {
+        "pass_llm"
+    }
+
+    fn run(&self, ctx: &mut FlowContext<'_>) -> Result<(), LlmError> {
+        let response = ctx.llm.generate(&ctx.request)?;
+        ctx.response = Some(response);
+        Ok(())
+    }
+}
+
+#[test]
+fn flow_node_calls_llm_via_context() {
+    let mut registry = ProviderRegistry::new();
+    registry.register(OkFlowProvider);
+    let flow = FlowPipeline::builder().push(PassThroughLlmFlowNode).build();
+    let request = GenerateRequest::new(
+        ModelRef::new("flow-ok", "any"),
+        vec![ChatMessage::new(MessageRole::User, "hi")],
+    );
+    let out = registry
+        .generate_with_flow(request, &flow)
+        .expect("flow should succeed");
+    assert_eq!(out.message.content, "from-llm");
+}
+
+#[test]
+fn flow_empty_pipeline_errors_without_response() {
+    let mut registry = ProviderRegistry::new();
+    registry.register(OkFlowProvider);
+    let flow = FlowPipeline::builder().build();
+    let request = GenerateRequest::new(
+        ModelRef::new("flow-ok", "any"),
+        vec![ChatMessage::new(MessageRole::User, "hi")],
+    );
+    let err = registry
+        .generate_with_flow(request, &flow)
+        .expect_err("need response");
+    assert!(matches!(err, LlmError::InvalidRequest(_)));
+}
+
+#[test]
+fn flow_default_output_node_fills_when_none() {
+    struct NoopFlowNode;
+
+    impl FlowNode for NoopFlowNode {
+        fn id(&self) -> &'static str {
+            "noop"
+        }
+
+        fn run(&self, _ctx: &mut FlowContext<'_>) -> Result<(), LlmError> {
+            Ok(())
+        }
+    }
+
+    /// 与 `llm-node-output-default` 同语义；测试内联以避免 path 依赖下双份 `llm-kit` trait 不兼容。
+    struct InlineDefaultOutput;
+
+    impl FlowNode for InlineDefaultOutput {
+        fn id(&self) -> &'static str {
+            "default_output"
+        }
+
+        fn run(&self, ctx: &mut FlowContext<'_>) -> Result<(), LlmError> {
+            if ctx.response.is_some() {
+                return Ok(());
+            }
+            ctx.response = Some(GenerateResponse {
+                model: ctx.request.model.clone(),
+                message: ChatMessage::new(MessageRole::Assistant, "fallback-inline"),
+                finish_reason: FinishReason::Stop,
+                usage: None,
+                raw: None,
+            });
+            Ok(())
+        }
+    }
+
+    let mut registry = ProviderRegistry::new();
+    registry.register(OkFlowProvider);
+    let flow = FlowPipeline::builder()
+        .push(NoopFlowNode)
+        .push(InlineDefaultOutput)
+        .build();
+    let request = GenerateRequest::new(
+        ModelRef::new("flow-ok", "any"),
+        vec![ChatMessage::new(MessageRole::User, "hi")],
+    );
+    let out = registry
+        .generate_with_flow(request, &flow)
+        .expect("default output");
+    assert_eq!(out.message.content, "fallback-inline");
+}

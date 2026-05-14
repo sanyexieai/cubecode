@@ -1,0 +1,154 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates\llm-kit\src\pipeline\mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="llm_kit" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">llm_kit\pipeline/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! 自请求到响应的可插拔流水线：由若干 [`PipelineStage`] 顺序组成，**无节点或 `None` 时与未接 pipeline 行为一致**。
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! 扩展方式：在独立 crate 中 `impl PipelineStage for YourType`，用 [`PipelineBuilder`] 组装后交给 [`crate::registry::ProviderRegistry::set_pipeline`]。
+<a href=#4 id=4 data-nosnippet>4</a>//!
+<a href=#5 id=5 data-nosnippet>5</a>//! 约定：`before_generate` 按注册顺序执行；`after_generate` / `after_generate_stream` 按**相同顺序**执行（非洋葱逆序），便于推理。
+<a href=#6 id=6 data-nosnippet>6</a>//!
+<a href=#7 id=7 data-nosnippet>7</a>//! # 执行模型（与「多节点业务链」的对照）
+<a href=#8 id=8 data-nosnippet>8</a>//!
+<a href=#9 id=9 data-nosnippet>9</a>//! [`crate::registry::ProviderRegistry`] 在挂有非空 pipeline 时，对单次 `generate` / `generate_stream` 的顺序为：
+<a href=#10 id=10 data-nosnippet>10</a>//!
+<a href=#11 id=11 data-nosnippet>11</a>//! 1. 克隆请求 → [`PipelineContext`]
+<a href=#12 id=12 data-nosnippet>12</a>//! 2. 按注册顺序依次调用各阶段的 [`PipelineStage::before_generate`]
+<a href=#13 id=13 data-nosnippet>13</a>//! 3. **恰好一次**对 [`crate::core::provider::LlmProvider`] 的调用（内部仍带重试）
+<a href=#14 id=14 data-nosnippet>14</a>//! 4. 将结果写入 `ctx.response`
+<a href=#15 id=15 data-nosnippet>15</a>//! 5. 按注册顺序依次调用各阶段的 [`PipelineStage::after_generate`]（流式为结束后 [`PipelineStage::after_generate_stream`]）
+<a href=#16 id=16 data-nosnippet>16</a>//!
+<a href=#17 id=17 data-nosnippet>17</a>//! 文本化数据流（箭头表示顺序，与一次 provider 调用的关系）：
+<a href=#18 id=18 data-nosnippet>18</a>//!
+<a href=#19 id=19 data-nosnippet>19</a>//! ```text
+<a href=#20 id=20 data-nosnippet>20</a>//! Request
+<a href=#21 id=21 data-nosnippet>21</a>//!   -&gt; before[stage0] -&gt; before[stage1] -&gt; ... -&gt; before[stageN]
+<a href=#22 id=22 data-nosnippet>22</a>//!   -&gt; LlmProvider.generate(请求为 ctx.request)
+<a href=#23 id=23 data-nosnippet>23</a>//!   -&gt; after[stage0] -&gt; after[stage1] -&gt; ... -&gt; after[stageN]
+<a href=#24 id=24 data-nosnippet>24</a>//!   -&gt; Response
+<a href=#25 id=25 data-nosnippet>25</a>//! ```
+<a href=#26 id=26 data-nosnippet>26</a>//!
+<a href=#27 id=27 data-nosnippet>27</a>//! **含义**：框架只提供「围绕**一次** provider 往返」的前后链；**没有**「每个节点自动对应一次独立 LLM 调用」的内置语义。
+<a href=#28 id=28 data-nosnippet>28</a>//!
+<a href=#29 id=29 data-nosnippet>29</a>//! # 典型业务节点如何落位
+<a href=#30 id=30 data-nosnippet>30</a>//!
+<a href=#31 id=31 data-nosnippet>31</a>//! | 概念（例：输入→记忆→意图→执行→输出） | 是否天然「一节点一框架钩子」 | 常见落位 |
+<a href=#32 id=32 data-nosnippet>32</a>//! |--------------------------------------|------------------------------|----------|
+<a href=#33 id=33 data-nosnippet>33</a>//! | 输入 | 是 | 初始 [`GenerateRequest`] / [`PipelineContext::request`] |
+<a href=#34 id=34 data-nosnippet>34</a>//! | 记忆召回 | 部分 | [`PipelineStage::before_generate`] 内改 `messages` / `metadata`，或节点内调检索；若召回本身还要一次 LLM，在**节点内部**自建调用，不是 Registry 的第二趟 |
+<a href=#35 id=35 data-nosnippet>35</a>//! | 意图分类 | 部分 | `before_generate` 内分类，结果写 `metadata`；**无**内置意图路由表 |
+<a href=#36 id=36 data-nosnippet>36</a>//! | 意图执行（改 prompt/模型后交主模型） | 可 | 仍在前序 `before_generate` 中改 `ctx.request`，由步骤 3 一次生成 |
+<a href=#37 id=37 data-nosnippet>37</a>//! | 意图执行（独立第二条 LLM 链） | 否（单条 pipeline） | 应用层多次 `generate`，或单节点内自建多轮调用 |
+<a href=#38 id=38 data-nosnippet>38</a>//! | 输出整形 / 落库 | 是 | [`PipelineStage::after_generate`] |
+<a href=#39 id=39 data-nosnippet>39</a>//!
+<a href=#40 id=40 data-nosnippet>40</a>//! # 与字面线性链 A→B→C→D→输出的差异
+<a href=#41 id=41 data-nosnippet>41</a>//!
+<a href=#42 id=42 data-nosnippet>42</a>//! 若业务期望「全程线性、且 D 在模型之后」，应把 **D 放在 `after_generate`**；若某步必须在模型之前，应放在 **`before_generate`**，而不是假设存在「模型后的第四种全局钩子」。
+<a href=#43 id=43 data-nosnippet>43</a>//!
+<a href=#44 id=44 data-nosnippet>44</a>//! # 多步编排（多轮 Registry 调用）
+<a href=#45 id=45 data-nosnippet>45</a>//!
+<a href=#46 id=46 data-nosnippet>46</a>//! 若每个节点都要**各自**走 `ProviderRegistry::generate` 级别的一次往返，请在 Registry **之上**编排（多次调用或组合 pipeline），或在一个「复合」[`PipelineStage`] 内部封装多轮逻辑；本模块**不**替代通用工作流引擎。
+<a href=#47 id=47 data-nosnippet>47</a>
+<a href=#48 id=48 data-nosnippet>48</a></span><span class="kw">use </span>std::sync::Arc;
+<a href=#49 id=49 data-nosnippet>49</a><span class="kw">use </span><span class="kw">crate</span>::core::error::LlmError;
+<a href=#50 id=50 data-nosnippet>50</a><span class="kw">use </span><span class="kw">crate</span>::core::types::{GenerateRequest, GenerateResponse};
+<a href=#51 id=51 data-nosnippet>51</a>
+<a href=#52 id=52 data-nosnippet>52</a><span class="doccomment">/// 单次调用在节点间传递的可变上下文。
+<a href=#53 id=53 data-nosnippet>53</a></span><span class="attr">#[derive(Debug, Clone)]
+<a href=#54 id=54 data-nosnippet>54</a></span><span class="kw">pub struct </span>PipelineContext {
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="kw">pub </span>request: GenerateRequest,
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="kw">pub </span>response: <span class="prelude-ty">Option</span>&lt;GenerateResponse&gt;,
+<a href=#57 id=57 data-nosnippet>57</a>}
+<a href=#58 id=58 data-nosnippet>58</a>
+<a href=#59 id=59 data-nosnippet>59</a><span class="kw">impl </span>PipelineContext {
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="kw">pub fn </span>new(request: GenerateRequest) -&gt; <span class="self">Self </span>{
+<a href=#61 id=61 data-nosnippet>61</a>        <span class="self">Self </span>{
+<a href=#62 id=62 data-nosnippet>62</a>            request,
+<a href=#63 id=63 data-nosnippet>63</a>            response: <span class="prelude-val">None</span>,
+<a href=#64 id=64 data-nosnippet>64</a>        }
+<a href=#65 id=65 data-nosnippet>65</a>    }
+<a href=#66 id=66 data-nosnippet>66</a>
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">pub fn </span>take_response(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; GenerateResponse {
+<a href=#68 id=68 data-nosnippet>68</a>        <span class="self">self</span>.response
+<a href=#69 id=69 data-nosnippet>69</a>            .take()
+<a href=#70 id=70 data-nosnippet>70</a>            .expect(<span class="string">"pipeline after_generate must leave response set"</span>)
+<a href=#71 id=71 data-nosnippet>71</a>    }
+<a href=#72 id=72 data-nosnippet>72</a>}
+<a href=#73 id=73 data-nosnippet>73</a>
+<a href=#74 id=74 data-nosnippet>74</a><span class="doccomment">/// 一个流水线节点：默认钩子为空，只实现关心的阶段即可。
+<a href=#75 id=75 data-nosnippet>75</a></span><span class="kw">pub trait </span>PipelineStage: Send + Sync {
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="doccomment">/// 稳定 id，用于日志 / 调试。
+<a href=#77 id=77 data-nosnippet>77</a>    </span><span class="kw">fn </span>id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
+<a href=#78 id=78 data-nosnippet>78</a>
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="doccomment">/// 在调用 provider 之前；可改写 `ctx.request`。
+<a href=#80 id=80 data-nosnippet>80</a>    </span><span class="kw">fn </span>before_generate(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: <span class="kw-2">&amp;mut </span>PipelineContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), LlmError&gt; {
+<a href=#81 id=81 data-nosnippet>81</a>        <span class="prelude-val">Ok</span>(())
+<a href=#82 id=82 data-nosnippet>82</a>    }
+<a href=#83 id=83 data-nosnippet>83</a>
+<a href=#84 id=84 data-nosnippet>84</a>    <span class="doccomment">/// 在非流式 `generate` 得到响应之后；可改写 `ctx.response`。
+<a href=#85 id=85 data-nosnippet>85</a>    </span><span class="kw">fn </span>after_generate(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: <span class="kw-2">&amp;mut </span>PipelineContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), LlmError&gt; {
+<a href=#86 id=86 data-nosnippet>86</a>        <span class="prelude-val">Ok</span>(())
+<a href=#87 id=87 data-nosnippet>87</a>    }
+<a href=#88 id=88 data-nosnippet>88</a>
+<a href=#89 id=89 data-nosnippet>89</a>    <span class="doccomment">/// 在流式 `generate_stream` 完整结束之后调用；默认转调 [`PipelineStage::after_generate`]。
+<a href=#90 id=90 data-nosnippet>90</a>    </span><span class="kw">fn </span>after_generate_stream(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>PipelineContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), LlmError&gt; {
+<a href=#91 id=91 data-nosnippet>91</a>        <span class="self">self</span>.after_generate(ctx)
+<a href=#92 id=92 data-nosnippet>92</a>    }
+<a href=#93 id=93 data-nosnippet>93</a>}
+<a href=#94 id=94 data-nosnippet>94</a>
+<a href=#95 id=95 data-nosnippet>95</a><span class="doccomment">/// 有序阶段列表；[`Pipeline::is_empty`] 或 registry 未设置 pipeline 时不跑任何钩子。
+<a href=#96 id=96 data-nosnippet>96</a></span><span class="attr">#[derive(Clone, Default)]
+<a href=#97 id=97 data-nosnippet>97</a></span><span class="kw">pub struct </span>Pipeline {
+<a href=#98 id=98 data-nosnippet>98</a>    stages: Vec&lt;Arc&lt;<span class="kw">dyn </span>PipelineStage&gt;&gt;,
+<a href=#99 id=99 data-nosnippet>99</a>}
+<a href=#100 id=100 data-nosnippet>100</a>
+<a href=#101 id=101 data-nosnippet>101</a><span class="kw">impl </span>Pipeline {
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="kw">pub fn </span>builder() -&gt; PipelineBuilder {
+<a href=#103 id=103 data-nosnippet>103</a>        PipelineBuilder::default()
+<a href=#104 id=104 data-nosnippet>104</a>    }
+<a href=#105 id=105 data-nosnippet>105</a>
+<a href=#106 id=106 data-nosnippet>106</a>    <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+<a href=#107 id=107 data-nosnippet>107</a>        <span class="self">self</span>.stages.is_empty()
+<a href=#108 id=108 data-nosnippet>108</a>    }
+<a href=#109 id=109 data-nosnippet>109</a>
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>run_before(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>PipelineContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), LlmError&gt; {
+<a href=#111 id=111 data-nosnippet>111</a>        <span class="kw">for </span>stage <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.stages {
+<a href=#112 id=112 data-nosnippet>112</a>            stage.before_generate(ctx)<span class="question-mark">?</span>;
+<a href=#113 id=113 data-nosnippet>113</a>        }
+<a href=#114 id=114 data-nosnippet>114</a>        <span class="prelude-val">Ok</span>(())
+<a href=#115 id=115 data-nosnippet>115</a>    }
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>run_after_generate(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>PipelineContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), LlmError&gt; {
+<a href=#118 id=118 data-nosnippet>118</a>        <span class="kw">for </span>stage <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.stages {
+<a href=#119 id=119 data-nosnippet>119</a>            stage.after_generate(ctx)<span class="question-mark">?</span>;
+<a href=#120 id=120 data-nosnippet>120</a>        }
+<a href=#121 id=121 data-nosnippet>121</a>        <span class="prelude-val">Ok</span>(())
+<a href=#122 id=122 data-nosnippet>122</a>    }
+<a href=#123 id=123 data-nosnippet>123</a>
+<a href=#124 id=124 data-nosnippet>124</a>    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>run_after_stream(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>PipelineContext) -&gt; <span class="prelude-ty">Result</span>&lt;(), LlmError&gt; {
+<a href=#125 id=125 data-nosnippet>125</a>        <span class="kw">for </span>stage <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.stages {
+<a href=#126 id=126 data-nosnippet>126</a>            stage.after_generate_stream(ctx)<span class="question-mark">?</span>;
+<a href=#127 id=127 data-nosnippet>127</a>        }
+<a href=#128 id=128 data-nosnippet>128</a>        <span class="prelude-val">Ok</span>(())
+<a href=#129 id=129 data-nosnippet>129</a>    }
+<a href=#130 id=130 data-nosnippet>130</a>}
+<a href=#131 id=131 data-nosnippet>131</a>
+<a href=#132 id=132 data-nosnippet>132</a><span class="attr">#[derive(Default)]
+<a href=#133 id=133 data-nosnippet>133</a></span><span class="kw">pub struct </span>PipelineBuilder {
+<a href=#134 id=134 data-nosnippet>134</a>    stages: Vec&lt;Arc&lt;<span class="kw">dyn </span>PipelineStage&gt;&gt;,
+<a href=#135 id=135 data-nosnippet>135</a>}
+<a href=#136 id=136 data-nosnippet>136</a>
+<a href=#137 id=137 data-nosnippet>137</a><span class="kw">impl </span>PipelineBuilder {
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="kw">pub fn </span>push&lt;S: PipelineStage + <span class="lifetime">'static</span>&gt;(<span class="kw-2">mut </span><span class="self">self</span>, stage: S) -&gt; <span class="self">Self </span>{
+<a href=#139 id=139 data-nosnippet>139</a>        <span class="self">self</span>.stages.push(Arc::new(stage));
+<a href=#140 id=140 data-nosnippet>140</a>        <span class="self">self
+<a href=#141 id=141 data-nosnippet>141</a>    </span>}
+<a href=#142 id=142 data-nosnippet>142</a>
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">pub fn </span>push_arc(<span class="kw-2">mut </span><span class="self">self</span>, stage: Arc&lt;<span class="kw">dyn </span>PipelineStage&gt;) -&gt; <span class="self">Self </span>{
+<a href=#144 id=144 data-nosnippet>144</a>        <span class="self">self</span>.stages.push(stage);
+<a href=#145 id=145 data-nosnippet>145</a>        <span class="self">self
+<a href=#146 id=146 data-nosnippet>146</a>    </span>}
+<a href=#147 id=147 data-nosnippet>147</a>
+<a href=#148 id=148 data-nosnippet>148</a>    <span class="kw">pub fn </span>build(<span class="self">self</span>) -&gt; Pipeline {
+<a href=#149 id=149 data-nosnippet>149</a>        Pipeline {
+<a href=#150 id=150 data-nosnippet>150</a>            stages: <span class="self">self</span>.stages,
+<a href=#151 id=151 data-nosnippet>151</a>        }
+<a href=#152 id=152 data-nosnippet>152</a>    }
+<a href=#153 id=153 data-nosnippet>153</a>}
+</code></pre></div></section></main></body></html>

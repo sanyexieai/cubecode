@@ -5,15 +5,19 @@
 //! ## 源码目录（与 `src/` 下文件夹一致）
 //! - `core/` — 错误、类型、[`LlmProvider`] 契约
 //! - `runtime/` — 环境变量与重试策略
-//! - `registry/` — 多后端注册与带重试的调用
+//! - `registry/` — 多后端注册与带重试的调用（可选 pipeline）
 //! - `sanitize/` — 助手文本清洗
 //! - `providers/` — 厂商预设与线路协议实现
+//! - `pipeline/` — 可选「单次 generate + 前后钩子」
+//! - `flow/` — 可选「节点链 + 共享 [`LlmProvider`]」，无中心 LLM 调用
 //!
 //! 环境变量优先读取 `LLM_*`，并兼容 Honeycomb 风格的 `HC_LLM_*`。
 //!
 //! 库本身只读进程环境，不读取 `.env` 文件；**`apps/llm-cli` 提供的 `llm-kit` 命令** 会在启动时向上查找并加载 `.env`。
 
 mod core;
+pub mod flow;
+pub mod pipeline;
 pub mod providers;
 mod registry;
 mod runtime;
@@ -25,6 +29,8 @@ pub use core::types::{
     ChatMessage, FinishReason, GenerateRequest, GenerateResponse, MessageRole, ModelRef,
     ProviderInfo, StreamChunk, TokenUsage,
 };
+pub use flow::{FlowContext, FlowNode, FlowPipeline, FlowPipelineBuilder};
+pub use pipeline::{Pipeline, PipelineBuilder, PipelineContext, PipelineStage};
 pub use providers::{
     provider_api_key_var_name, provider_base_url_var_name, provider_preset, provider_presets,
     AnthropicMessagesProvider, OpenAiCompatibleProvider, ProtocolBinding, ProviderPreset,

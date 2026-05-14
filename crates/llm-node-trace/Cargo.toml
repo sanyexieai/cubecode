@@ -1,0 +1,11 @@
+[package]
+name = "llm-node-trace"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "llm-kit pipeline node: trace request/response boundaries (tracing)."
+
+[dependencies]
+llm-kit = { path = "../llm-kit" }
+tracing.workspace = true

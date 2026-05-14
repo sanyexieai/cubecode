@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/llm-kit", "apps/llm-cli"]
+members = [
+    "crates/llm-kit",
+    "crates/llm-node-trace",
+    "crates/llm-node-metadata",
+    "crates/llm-node-output-default",
+    "apps/llm-cli",
+]
 
 [workspace.package]
 version = "0.1.0"

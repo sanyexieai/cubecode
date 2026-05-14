@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["WireProtocol"],"fn":["provider_api_key_var_name","provider_base_url_var_name","provider_preset","provider_presets"],"mod":["protocols","vendors"],"struct":["ProviderPreset"]};
