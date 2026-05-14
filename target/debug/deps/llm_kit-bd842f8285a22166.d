@@ -1,13 +1,24 @@
-D:\code\cubecode\target\debug\deps\llm_kit-bd842f8285a22166.d: crates\llm-kit\src\lib.rs crates\llm-kit\src\env.rs crates\llm-kit\src\error.rs crates\llm-kit\src\openai.rs crates\llm-kit\src\provider.rs crates\llm-kit\src\registry.rs crates\llm-kit\src\retry.rs crates\llm-kit\src\sanitize.rs crates\llm-kit\src\types.rs
+D:\code\cubecode\target\debug\deps\llm_kit-bd842f8285a22166.d: crates\llm-kit\src\lib.rs crates\llm-kit\src\core\mod.rs crates\llm-kit\src\core\error.rs crates\llm-kit\src\core\provider.rs crates\llm-kit\src\core\types.rs crates\llm-kit\src\providers\mod.rs crates\llm-kit\src\providers\protocols\mod.rs crates\llm-kit\src\providers\protocols\anthropic_messages.rs crates\llm-kit\src\providers\protocols\chat_completions.rs crates\llm-kit\src\providers\preset.rs crates\llm-kit\src\providers\vendors\mod.rs crates\llm-kit\src\providers\vendors\anthropic.rs crates\llm-kit\src\providers\vendors\deepseek.rs crates\llm-kit\src\providers\vendors\minimax.rs crates\llm-kit\src\providers\vendors\openai.rs crates\llm-kit\src\registry\mod.rs crates\llm-kit\src\runtime\mod.rs crates\llm-kit\src\runtime\env.rs crates\llm-kit\src\runtime\retry.rs crates\llm-kit\src\sanitize\mod.rs
 
-D:\code\cubecode\target\debug\deps\libllm_kit-bd842f8285a22166.rmeta: crates\llm-kit\src\lib.rs crates\llm-kit\src\env.rs crates\llm-kit\src\error.rs crates\llm-kit\src\openai.rs crates\llm-kit\src\provider.rs crates\llm-kit\src\registry.rs crates\llm-kit\src\retry.rs crates\llm-kit\src\sanitize.rs crates\llm-kit\src\types.rs
+D:\code\cubecode\target\debug\deps\libllm_kit-bd842f8285a22166.rmeta: crates\llm-kit\src\lib.rs crates\llm-kit\src\core\mod.rs crates\llm-kit\src\core\error.rs crates\llm-kit\src\core\provider.rs crates\llm-kit\src\core\types.rs crates\llm-kit\src\providers\mod.rs crates\llm-kit\src\providers\protocols\mod.rs crates\llm-kit\src\providers\protocols\anthropic_messages.rs crates\llm-kit\src\providers\protocols\chat_completions.rs crates\llm-kit\src\providers\preset.rs crates\llm-kit\src\providers\vendors\mod.rs crates\llm-kit\src\providers\vendors\anthropic.rs crates\llm-kit\src\providers\vendors\deepseek.rs crates\llm-kit\src\providers\vendors\minimax.rs crates\llm-kit\src\providers\vendors\openai.rs crates\llm-kit\src\registry\mod.rs crates\llm-kit\src\runtime\mod.rs crates\llm-kit\src\runtime\env.rs crates\llm-kit\src\runtime\retry.rs crates\llm-kit\src\sanitize\mod.rs
 
 crates\llm-kit\src\lib.rs:
-crates\llm-kit\src\env.rs:
-crates\llm-kit\src\error.rs:
-crates\llm-kit\src\openai.rs:
-crates\llm-kit\src\provider.rs:
-crates\llm-kit\src\registry.rs:
-crates\llm-kit\src\retry.rs:
-crates\llm-kit\src\sanitize.rs:
-crates\llm-kit\src\types.rs:
+crates\llm-kit\src\core\mod.rs:
+crates\llm-kit\src\core\error.rs:
+crates\llm-kit\src\core\provider.rs:
+crates\llm-kit\src\core\types.rs:
+crates\llm-kit\src\providers\mod.rs:
+crates\llm-kit\src\providers\protocols\mod.rs:
+crates\llm-kit\src\providers\protocols\anthropic_messages.rs:
+crates\llm-kit\src\providers\protocols\chat_completions.rs:
+crates\llm-kit\src\providers\preset.rs:
+crates\llm-kit\src\providers\vendors\mod.rs:
+crates\llm-kit\src\providers\vendors\anthropic.rs:
+crates\llm-kit\src\providers\vendors\deepseek.rs:
+crates\llm-kit\src\providers\vendors\minimax.rs:
+crates\llm-kit\src\providers\vendors\openai.rs:
+crates\llm-kit\src\registry\mod.rs:
+crates\llm-kit\src\runtime\mod.rs:
+crates\llm-kit\src\runtime\env.rs:
+crates\llm-kit\src\runtime\retry.rs:
+crates\llm-kit\src\sanitize\mod.rs:

@@ -212,8 +212,19 @@ fn deepseek_provider_preset_uses_openai_compatible_endpoint() {
     assert_eq!(preset.default_base_url, "https://api.deepseek.com");
     assert_eq!(preset.balanced_model, "deepseek-v4-flash");
     assert_eq!(preset.coding_model, "deepseek-v4-pro");
+    assert_eq!(preset.wire, WireProtocol::ChatCompletions);
     assert_eq!(provider_api_key_var_name("deepseek"), "DEEPSEEK_API_KEY");
     assert_eq!(provider_base_url_var_name("deepseek"), "DEEPSEEK_BASE_URL");
+}
+
+#[test]
+fn anthropic_provider_preset_uses_messages_api() {
+    let preset = provider_preset("anthropic").expect("anthropic preset should exist");
+
+    assert_eq!(preset.default_base_url, "https://api.anthropic.com");
+    assert_eq!(preset.wire, WireProtocol::AnthropicMessages);
+    assert_eq!(provider_api_key_var_name("anthropic"), "ANTHROPIC_API_KEY");
+    assert_eq!(provider_base_url_var_name("anthropic"), "ANTHROPIC_BASE_URL");
 }
 
 #[test]

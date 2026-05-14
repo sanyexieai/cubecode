@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Pluggable LLM core: OpenAI-compatible chat, streaming, retries, and provider registry."
+description = "Pluggable LLM core: Chat Completions (OpenAI-compatible), Anthropic Messages, streaming, retries, and provider registry."
 
 [dependencies]
 reqwest.workspace = true

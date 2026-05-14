@@ -1,36 +1,46 @@
-//! 通用可插拔 LLM 核心：OpenAI 兼容 Chat Completions、流式输出、重试与注册表。
+//! 通用可插拔 LLM 核心：多种线路协议（Chat Completions、Anthropic Messages）、流式、重试与注册表。
+//!
+//! 厂商与协议见 [`providers`] 模块文档。
+//!
+//! ## 源码目录（与 `src/` 下文件夹一致）
+//! - `core/` — 错误、类型、[`LlmProvider`] 契约
+//! - `runtime/` — 环境变量与重试策略
+//! - `registry/` — 多后端注册与带重试的调用
+//! - `sanitize/` — 助手文本清洗
+//! - `providers/` — 厂商预设与线路协议实现
 //!
 //! 环境变量优先读取 `LLM_*`，并兼容 Honeycomb 风格的 `HC_LLM_*`。
 
-mod env;
-mod error;
-mod openai;
-mod provider;
+mod core;
+pub mod providers;
 mod registry;
-mod retry;
+mod runtime;
 mod sanitize;
-mod types;
 
-pub use env::{
-    default_base_url_for_provider, default_model_for_provider, default_model_from_env,
-    default_provider_from_env, provider_api_key_env_source, provider_api_key_from_env,
-    provider_api_key_var_name, provider_base_url_env_source, provider_base_url_from_env,
-    provider_base_url_var_name, provider_preset, provider_presets, provider_requires_api_key,
-    ProviderPreset,
-};
-pub use error::LlmError;
-pub use openai::OpenAiCompatibleProvider;
-pub use provider::LlmProvider;
-pub use registry::ProviderRegistry;
-pub use retry::{is_retryable_llm_error, is_retryable_provider_failure_message, LlmRetryPolicy};
-pub use sanitize::{sanitize_assistant_text, strip_assistant_hidden_blocks};
-pub use types::{
+pub use core::error::LlmError;
+pub use core::provider::LlmProvider;
+pub use core::types::{
     ChatMessage, FinishReason, GenerateRequest, GenerateResponse, MessageRole, ModelRef,
     ProviderInfo, StreamChunk, TokenUsage,
 };
+pub use providers::{
+    provider_api_key_var_name, provider_base_url_var_name, provider_preset, provider_presets,
+    AnthropicMessagesProvider, OpenAiCompatibleProvider, ProtocolBinding, ProviderPreset,
+    WireProtocol,
+};
+pub use registry::ProviderRegistry;
+pub use runtime::env::{
+    default_base_url_for_provider, default_model_for_provider, default_model_from_env,
+    default_provider_from_env, provider_api_key_env_source, provider_api_key_from_env,
+    provider_base_url_env_source, provider_base_url_from_env, provider_requires_api_key,
+};
+pub use runtime::retry::{is_retryable_llm_error, is_retryable_provider_failure_message, LlmRetryPolicy};
+pub use sanitize::{sanitize_assistant_text, strip_assistant_hidden_blocks};
 
 #[cfg(test)]
-pub(crate) use openai::{content_to_string, message_content_to_string, OpenAiChatResponse};
+pub(crate) use providers::protocols::chat_completions::{
+    content_to_string, message_content_to_string, OpenAiChatResponse,
+};
 
 pub fn default_registry_from_env() -> ProviderRegistry {
     let mut registry = ProviderRegistry::new();
@@ -38,16 +48,32 @@ pub fn default_registry_from_env() -> ProviderRegistry {
     let api_key = provider_api_key_from_env(&provider_id);
     let base_url = provider_base_url_from_env(&provider_id);
 
-    if let Some(api_key) = api_key {
-        if let Ok(provider) = OpenAiCompatibleProvider::new(
-            provider_id.clone(),
-            provider_preset(&provider_id)
-                .map(|preset| preset.display_name.to_owned())
-                .unwrap_or_else(|| format!("{provider_id} compatible")),
-            base_url,
-            api_key,
-        ) {
-            registry.register(provider);
+    let Some(api_key) = api_key else {
+        return registry;
+    };
+
+    let display_name = provider_preset(&provider_id)
+        .map(|preset| preset.display_name.to_owned())
+        .unwrap_or_else(|| format!("{provider_id} compatible"));
+
+    let wire = provider_preset(&provider_id)
+        .map(|preset| preset.wire)
+        .unwrap_or(WireProtocol::ChatCompletions);
+
+    match wire {
+        WireProtocol::AnthropicMessages => {
+            if let Ok(provider) =
+                AnthropicMessagesProvider::new(provider_id.clone(), display_name, base_url, api_key)
+            {
+                registry.register(provider);
+            }
+        }
+        WireProtocol::ChatCompletions => {
+            if let Ok(provider) =
+                OpenAiCompatibleProvider::new(provider_id.clone(), display_name, base_url, api_key)
+            {
+                registry.register(provider);
+            }
         }
     }
 
