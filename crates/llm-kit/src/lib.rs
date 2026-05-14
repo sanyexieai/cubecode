@@ -10,6 +10,8 @@
 //! - `providers/` — 厂商预设与线路协议实现
 //!
 //! 环境变量优先读取 `LLM_*`，并兼容 Honeycomb 风格的 `HC_LLM_*`。
+//!
+//! 库本身只读进程环境，不读取 `.env` 文件；**`apps/llm-cli` 提供的 `llm-kit` 命令** 会在启动时向上查找并加载 `.env`。
 
 mod core;
 pub mod providers;

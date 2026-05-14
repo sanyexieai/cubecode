@@ -1,0 +1,16 @@
+[package]
+name = "llm-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Command-line interface for llm-kit (list presets, one-shot chat)."
+
+[[bin]]
+name = "llm-kit"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+dotenvy.workspace = true
+llm-kit = { path = "../../crates/llm-kit" }
