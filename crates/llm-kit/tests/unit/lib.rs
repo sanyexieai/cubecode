@@ -410,6 +410,65 @@ fn flow_node_calls_llm_via_context() {
     assert_eq!(out.message.content, "from-llm");
 }
 
+struct FanOutFlowNode;
+
+impl FlowNode for FanOutFlowNode {
+    fn id(&self) -> &'static str {
+        "fanout"
+    }
+
+    fn run(&self, ctx: &mut FlowContext<'_>) -> Result<(), LlmError> {
+        let a = ctx.llm.generate(&ctx.request)?;
+        ctx.branch_outputs.insert("a".into(), a);
+        let b = ctx.llm.generate(&ctx.request)?;
+        ctx.branch_outputs.insert("b".into(), b);
+        Ok(())
+    }
+}
+
+struct MergeBranchesFlowNode;
+
+impl FlowNode for MergeBranchesFlowNode {
+    fn id(&self) -> &'static str {
+        "merge"
+    }
+
+    fn run(&self, ctx: &mut FlowContext<'_>) -> Result<(), LlmError> {
+        let a = ctx.branch_outputs.get("a").cloned();
+        let b = ctx.branch_outputs.get("b").cloned();
+        let (Some(ra), Some(rb)) = (a, b) else {
+            return Err(LlmError::InvalidRequest("missing branch_outputs".into()));
+        };
+        let merged = format!("{}|{}", ra.message.content, rb.message.content);
+        ctx.response = Some(GenerateResponse {
+            model: ctx.request.model.clone(),
+            message: ChatMessage::new(MessageRole::Assistant, merged),
+            finish_reason: FinishReason::Stop,
+            usage: None,
+            raw: None,
+        });
+        Ok(())
+    }
+}
+
+#[test]
+fn flow_branch_outputs_one_to_many_then_merge() {
+    let mut registry = ProviderRegistry::new();
+    registry.register(OkFlowProvider);
+    let flow = FlowPipeline::builder()
+        .push(FanOutFlowNode)
+        .push(MergeBranchesFlowNode)
+        .build();
+    let request = GenerateRequest::new(
+        ModelRef::new("flow-ok", "any"),
+        vec![ChatMessage::new(MessageRole::User, "hi")],
+    );
+    let out = registry
+        .generate_with_flow(request, &flow)
+        .expect("merge branches");
+    assert_eq!(out.message.content, "from-llm|from-llm");
+}
+
 #[test]
 fn flow_empty_pipeline_errors_without_response() {
     let mut registry = ProviderRegistry::new();

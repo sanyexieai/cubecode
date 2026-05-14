@@ -2,9 +2,6 @@
 resolver = "2"
 members = [
     "crates/llm-kit",
-    "crates/llm-node-trace",
-    "crates/llm-node-metadata",
-    "crates/llm-node-output-default",
     "apps/llm-cli",
 ]
 
@@ -22,3 +19,7 @@ thiserror = "1"
 tracing = "0.1"
 clap = { version = "4.5", features = ["derive", "std", "help", "usage", "error-context", "env"] }
 dotenvy = "0.15"
+tokio = { version = "1", default-features = false, features = ["macros", "rt", "rt-multi-thread", "sync", "fs", "io-util"] }
+async-trait = "0.1"
+hex = "0.4"
+sha2 = "0.10"

@@ -528,28 +528,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "llm-node-metadata"
-version = "0.1.0"
-dependencies = [
- "llm-kit",
-]
-
-[[package]]
-name = "llm-node-output-default"
-version = "0.1.0"
-dependencies = [
- "llm-kit",
-]
-
-[[package]]
-name = "llm-node-trace"
-version = "0.1.0"
-dependencies = [
- "llm-kit",
- "tracing",
-]
-
-[[package]]
 name = "log"
 version = "0.4.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
