@@ -1,0 +1,10 @@
+[package]
+name = "cubecode-inbox"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "② Inbox queue: backpressure, ordering, shutdown (shell)."
+
+[dependencies]
+cubecode-contracts = { path = "../cubecode-contracts" }

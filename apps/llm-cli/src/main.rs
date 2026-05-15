@@ -1,4 +1,4 @@
-//! `llm-kit` 命令行：不传子命令时默认多轮聊天；另有 `providers` / `env` / `complete`。
+//! `llm-kit` 命令行：不传子命令时默认多轮聊天；另有 `providers` / `env` / `complete` / `six-layer-pipeline`。
 //!
 //! 启动时从当前工作目录**向上**查找第一个 `.env` 并加载（dotenvy：不覆盖已在环境里设置的变量）。
 //! 与 llm-kit 库约定一致，支持 `LLM_PROVIDER`、`LLM_MODEL`、`LLM_API_KEY`、`LLM_BASE_URL` 等。
@@ -17,7 +17,7 @@ use llm_kit::{
 #[command(
     name = "llm-kit",
     version,
-    about = "llm-kit CLI：默认聊天；子命令 providers / env / complete",
+    about = "llm-kit CLI：默认聊天；子命令 providers / env / complete / six-layer-pipeline",
     long_about = None,
     subcommand_required = false,
     arg_required_else_help = false
@@ -39,6 +39,8 @@ enum Commands {
         #[arg(short, long)]
         message: Option<String>,
     },
+    /// 六层占位全流程：adapter → inbox → dispatch → orchestrator → step → sink（不调真实 LLM）
+    SixLayerPipeline,
 }
 
 fn main() -> ExitCode {
@@ -104,7 +106,26 @@ fn run(cmd: Commands) -> Result<(), String> {
             one_shot_chat(&user_text)?;
             Ok(())
         }
+        Commands::SixLayerPipeline => run_six_layer_minimal(),
     }
+}
+
+/// ①→②→③→④→⑤→⑥ 占位串联（无网络、无真实 LLM）。
+fn run_six_layer_minimal() -> Result<(), String> {
+    println!("=== six-layer pipeline (placeholder) ===");
+    let mut inbox = cubecode_inbox::Inbox::new();
+    println!("① adapter → ② inbox: enqueue user line");
+    cubecode_adapter::enqueue_user_line(&mut inbox, "hello cubecode");
+    println!("② inbox: pop one event");
+    let ev = inbox
+        .pop()
+        .ok_or_else(|| "inbox unexpectedly empty".to_owned())?;
+    println!("③ dispatch: route");
+    let route = cubecode_dispatch::route(&ev);
+    println!("④ orchestrator → ⑤ step → ⑥ sink");
+    cubecode_orchestrator::run_minimal_pipeline(route, &ev)?;
+    println!("=== done ===");
+    Ok(())
 }
 
 /// 不传子命令：终端上多轮对话；管道 stdin 则读入一次并回复。

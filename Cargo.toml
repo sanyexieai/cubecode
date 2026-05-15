@@ -1,7 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/llm-kit",
+    "crates/cubecode-contracts",
+    "crates/cubecode-step/llm-kit",
+    "crates/cubecode-adapter",
+    "crates/cubecode-inbox",
+    "crates/cubecode-dispatch",
+    "crates/cubecode-orchestrator",
+    "crates/cubecode-step",
+    "crates/cubecode-sink",
     "apps/llm-cli",
 ]
 

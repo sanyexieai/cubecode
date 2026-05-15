@@ -151,6 +151,53 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
+name = "cubecode-adapter"
+version = "0.1.0"
+dependencies = [
+ "cubecode-contracts",
+ "cubecode-inbox",
+]
+
+[[package]]
+name = "cubecode-contracts"
+version = "0.1.0"
+
+[[package]]
+name = "cubecode-dispatch"
+version = "0.1.0"
+dependencies = [
+ "cubecode-contracts",
+]
+
+[[package]]
+name = "cubecode-inbox"
+version = "0.1.0"
+dependencies = [
+ "cubecode-contracts",
+]
+
+[[package]]
+name = "cubecode-orchestrator"
+version = "0.1.0"
+dependencies = [
+ "cubecode-contracts",
+ "cubecode-sink",
+ "cubecode-step",
+]
+
+[[package]]
+name = "cubecode-sink"
+version = "0.1.0"
+
+[[package]]
+name = "cubecode-step"
+version = "0.1.0"
+dependencies = [
+ "cubecode-contracts",
+ "llm-kit",
+]
+
+[[package]]
 name = "displaydoc"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -512,6 +559,12 @@ name = "llm-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "cubecode-adapter",
+ "cubecode-dispatch",
+ "cubecode-inbox",
+ "cubecode-orchestrator",
+ "cubecode-sink",
+ "cubecode-step",
  "dotenvy",
  "llm-kit",
 ]

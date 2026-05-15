@@ -1,0 +1,11 @@
+[package]
+name = "cubecode-step"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "⑤ Step handlers: model/tools/domain steps (shell)."
+
+[dependencies]
+cubecode-contracts = { path = "../cubecode-contracts" }
+llm-kit = { path = "llm-kit" }

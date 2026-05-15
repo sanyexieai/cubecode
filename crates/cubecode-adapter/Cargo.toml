@@ -1,0 +1,11 @@
+[package]
+name = "cubecode-adapter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "① Producer/Adapter: raw I/O → semantic events (shell)."
+
+[dependencies]
+cubecode-contracts = { path = "../cubecode-contracts" }
+cubecode-inbox = { path = "../cubecode-inbox" }

@@ -1,0 +1,9 @@
+[package]
+name = "cubecode-sink"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "⑥ Sink: user-visible / external output (shell)."
+
+[dependencies]
