@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap.workspace = true
+cubecode-contracts = { path = "../../crates/cubecode-contracts" }
 cubecode-log = { path = "../../crates/cubecode-log" }
 cubecode-adapter = { path = "../../crates/cubecode-adapter" }
 cubecode-dispatch = { path = "../../crates/cubecode-dispatch" }
@@ -22,3 +23,4 @@ cubecode-step = { path = "../../crates/cubecode-step" }
 dotenvy.workspace = true
 llm-kit = { path = "../../crates/cubecode-step/llm-kit" }
 tracing.workspace = true
+ctrlc = "3.4"

@@ -3,16 +3,26 @@
 //! 启动时从当前工作目录**向上**查找第一个 `.env` 并加载（dotenvy：不覆盖已在环境里设置的变量）。
 //! 与 llm-kit 库约定一致，支持 `LLM_PROVIDER`、`LLM_MODEL`、`LLM_API_KEY`、`LLM_BASE_URL` 等。
 
-use std::io::{self, BufRead, IsTerminal, Read, Write};
+mod serve;
+
+use std::io::{self, IsTerminal, Read};
 use std::path::Path;
 use std::process::ExitCode;
+use std::sync::atomic::Ordering;
 
 use clap::{Parser, Subcommand};
+use cubecode_adapter::{TerminalAdapter, TerminalPoll};
+use cubecode_contracts::{ControlEvent, SessionId, TurnContext, TurnId};
 use cubecode_inbox::Inbox;
 use cubecode_orchestrator::{
-    run_full_turn, run_shutdown_turn, SinkStyle, StepBackend,
+    cancel_active_turn, new_cancel_flag, run_full_turn, run_shutdown_turn, Orchestrator,
+    SessionMetadata, SinkStyle, TurnRunner, USER_CANCELLED_MSG,
 };
-use cubecode_step::LlmStepContext;
+use cubecode_sink::emit_error_global;
+use cubecode_step::{
+    attach_memory_pipeline, MemoryChunk, MemoryConfig, ToolRegistry, ENV_MEMORY_ENABLED,
+};
+use std::sync::Arc;
 use llm_kit::{
     default_model_from_env, default_provider_from_env, default_registry_from_env,
     provider_presets, ChatMessage, MessageRole, ModelRef, WireProtocol,
@@ -22,7 +32,7 @@ use llm_kit::{
 #[command(
     name = "llm-kit",
     version,
-    about = "llm-kit CLI：默认聊天；子命令 providers / env / complete / logs / six-layer-pipeline",
+    about = "llm-kit CLI：默认聊天；子命令 providers / env / complete / logs / serve / six-layer-pipeline",
     long_about = None,
     subcommand_required = false,
     arg_required_else_help = false
@@ -31,6 +41,10 @@ struct Cli {
     /// 提高日志冗长度（`-v` / `-vv`）；未设时读 `RUST_LOG`
     #[arg(short, long, action = clap::ArgAction::Count, global = true)]
     verbose: u8,
+
+    /// 禁用流式输出（默认对聊天 / complete 使用流式，逐块打印助手回复）
+    #[arg(long, global = true)]
+    no_stream: bool,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -50,6 +64,15 @@ enum Commands {
     },
     /// 六层占位全流程：adapter → inbox → dispatch → orchestrator → step → sink（不调真实 LLM）
     SixLayerPipeline,
+    /// 阻塞 HTTP 服务：`POST /rpc`（JSON-RPC）→ ① `HttpJsonAdapter` → ②～⑥（默认 ⑤ 占位）
+    Serve {
+        /// 监听地址（默认 `127.0.0.1:8787` 或 `CUBECODE_SERVE_ADDR`）
+        #[arg(long, value_name = "ADDR")]
+        bind: Option<String>,
+        /// 使用真实 LLM（需配置 API Key）；默认仅 ⑤ 占位
+        #[arg(long)]
+        llm: bool,
+    },
     /// 查看已落盘日志（类似 `docker logs`）；`-f` 先打已有内容再跟随，默认读 `latest.log`
     Logs {
         /// 会话 id（对应 `.cubecode/logs/{id}.log`）；省略或 `latest` 表示 latest.log
@@ -71,20 +94,21 @@ fn main() -> ExitCode {
     if !skip_logging {
         init_logging(cli.verbose);
     }
+    let stream = !cli.no_stream;
     let result = match cli.command {
-        Some(cmd) => run(cmd),
-        None => run_default_chat(),
+        Some(cmd) => run(cmd, stream),
+        None => run_default_chat(stream),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("{e}");
+            emit_error_global(&e);
             ExitCode::FAILURE
         }
     }
 }
 
-fn run(cmd: Commands) -> Result<(), String> {
+fn run(cmd: Commands, stream: bool) -> Result<(), String> {
     match cmd {
         Commands::Providers => {
             println!("{:<12} {:<22} {:<24} {}", "id", "wire", "default_base_url", "balanced_model");
@@ -128,10 +152,11 @@ fn run(cmd: Commands) -> Result<(), String> {
                 return Err("no user message: pass -m/--message or pipe stdin".to_owned());
             }
 
-            one_shot_chat(&user_text)?;
+            one_shot_chat(&user_text, stream)?;
             Ok(())
         }
         Commands::SixLayerPipeline => run_six_layer_minimal(),
+        Commands::Serve { bind, llm } => serve::run_serve(bind.as_deref(), llm, stream),
         Commands::Logs {
             session,
             follow,
@@ -156,13 +181,20 @@ fn init_logging(verbose: u8) {
 fn run_six_layer_minimal() -> Result<(), String> {
     tracing::info!(target: cubecode_log::CLI, "六层演示开始（⑤执行层为占位）");
     println!("=== 六层流水线演示（⑤执行层占位）===");
-    let mut inbox = Inbox::new();
+    let mut inbox = Inbox::with_capacity(cubecode_inbox::capacity_from_env());
+    let session = SessionId::generate();
+    let mut orchestrator = Orchestrator::new(session.clone());
+    let ctx = TurnContext::new(session, TurnId::FIRST);
+    let tools = ToolRegistry::from_env();
     run_full_turn(
-        1,
+        &ctx,
+        &mut orchestrator,
         &mut inbox,
         "hello cubecode",
-        StepBackend::Placeholder,
+        &tools,
+        TurnRunner::placeholder(),
         SinkStyle::Prefixed,
+        None,
     )?;
     tracing::info!(target: cubecode_log::CLI, "六层演示结束");
     println!("=== 完成 ===");
@@ -170,52 +202,149 @@ fn run_six_layer_minimal() -> Result<(), String> {
 }
 
 /// 不传子命令：终端上多轮对话；管道 stdin 则读入一次并回复。
-fn run_default_chat() -> Result<(), String> {
+fn run_default_chat(stream: bool) -> Result<(), String> {
     let stdin = io::stdin();
     if stdin.is_terminal() {
-        eprintln!("多轮对话（①～⑥ 每层会写日志；`llm-kit logs -f` 可跟随）。退出：/exit 或 :q");
-        let mut reader = stdin.lock();
-        let mut line = String::new();
+        let mode = if stream {
+            "流式"
+        } else {
+            "非流式"
+        };
+        let stream_hint = if stream {
+            "；加 `--no-stream` 可改为一次性输出"
+        } else {
+            ""
+        };
+        eprintln!(
+            "多轮对话（{mode}{stream_hint}）。全链路诊断日志：`llm-kit logs -f`（终端默认不刷屏；调试可加 -v）。\
+             退出：/exit 或 :q；取消进行中轮次：/cancel 或 Ctrl+C（空闲时 Ctrl+C 退出）"
+        );
+        let cancel_flag = new_cancel_flag();
+        {
+            let flag = cancel_flag.clone();
+            ctrlc::set_handler(move || {
+                flag.store(true, Ordering::SeqCst);
+            })
+            .map_err(|e| format!("无法注册 Ctrl+C 处理：{e}"))?;
+        }
+        let reader = stdin.lock();
         let provider = default_provider_from_env();
         let model = default_model_from_env();
         let model_ref = ModelRef::new(provider, model);
-        let registry = default_registry_from_env();
-        let mut inbox = Inbox::new();
+        let mut registry = default_registry_from_env();
+        let memory_cfg = MemoryConfig::from_env();
+        let memory_store = Arc::new(cubecode_step::InMemoryRetriever::new());
+        if memory_cfg.enabled {
+            attach_memory_pipeline(&mut registry, memory_store.clone());
+            tracing::info!(
+                target: cubecode_log::CLI,
+                top_k = memory_cfg.top_k,
+                env = ENV_MEMORY_ENABLED,
+                "记忆召回已启用"
+            );
+        }
+        let tools = ToolRegistry::from_env();
+        let mut inbox = Inbox::with_capacity(cubecode_inbox::capacity_from_env());
         let mut messages: Vec<ChatMessage> = Vec::new();
-        let mut turn: u32 = 0;
+        let session = SessionId::generate();
+        let mut orchestrator = Orchestrator::new(session.clone());
+        let mut session_meta = SessionMetadata::new(session.clone());
+        tracing::info!(
+            target: cubecode_log::CLI,
+            session_id = %session,
+            stream,
+            "会话开始"
+        );
+        let mut terminal = TerminalAdapter::new(session.clone(), reader);
 
         loop {
-            eprint!("> ");
-            io::stderr().flush().map_err(|e| e.to_string())?;
-            line.clear();
-            if reader.read_line(&mut line).map_err(|e| e.to_string())? == 0 {
-                break;
-            }
-            let input = line.trim();
-            if input.is_empty() {
+            if cancel_flag.swap(false, Ordering::SeqCst) {
+                if orchestrator.is_turn_active() {
+                    cancel_active_turn(&mut orchestrator, &mut inbox);
+                    eprintln!("已取消进行中的轮次。");
+                } else {
+                    eprintln!("退出对话。");
+                    break;
+                }
                 continue;
             }
-            if input == "/exit" || input == ":q" {
-                turn += 1;
-                run_shutdown_turn(turn, &mut inbox)?;
-                break;
-            }
 
-            turn += 1;
-            messages.push(ChatMessage::new(MessageRole::User, input));
-            let ctx = LlmStepContext {
-                registry: &registry,
-                model: model_ref.clone(),
-                messages: &messages,
-            };
-            if let Some(content) = run_full_turn(
-                turn,
-                &mut inbox,
-                input,
-                StepBackend::Llm(ctx),
-                SinkStyle::Assistant,
-            )? {
-                messages.push(ChatMessage::new(MessageRole::Assistant, content));
+            match terminal.poll().map_err(|e| e.to_string())? {
+                TerminalPoll::Idle => continue,
+                TerminalPoll::Eof => break,
+                TerminalPoll::Cancel => {
+                    if cancel_active_turn(&mut orchestrator, &mut inbox) {
+                        eprintln!("已取消进行中的轮次。");
+                    } else {
+                        eprintln!("当前没有进行中的轮次。");
+                    }
+                }
+                TerminalPoll::Events(events) => {
+                    for event in events {
+                        match event {
+                            ControlEvent::Shutdown { .. } => {
+                                if orchestrator.is_turn_active() {
+                                    eprintln!("仍有进行中的轮次，请先 /cancel 再退出。");
+                                    continue;
+                                }
+                                let turn_ctx = TurnContext::new(
+                                    session.clone(),
+                                    terminal.next_turn_id(),
+                                );
+                                run_shutdown_turn(&turn_ctx, &mut orchestrator, &mut inbox)?;
+                                return Ok(());
+                            }
+                            ControlEvent::UserTurn { turn_id, text, .. } => {
+                                let turn_ctx = TurnContext::new(session.clone(), turn_id);
+                                let input = text.as_str();
+                                let transcript_before = messages.len();
+                                messages.push(ChatMessage::new(MessageRole::User, &text));
+                                let runner = TurnRunner::llm(
+                                    &registry,
+                                    model_ref.clone(),
+                                    &mut messages,
+                                    stream,
+                                    &mut session_meta,
+                                );
+                                match run_full_turn(
+                                    &turn_ctx,
+                                    &mut orchestrator,
+                                    &mut inbox,
+                                    input,
+                                    &tools,
+                                    runner,
+                                    SinkStyle::Assistant,
+                                    Some(cancel_flag.as_ref()),
+                                ) {
+                                    Ok(finished) => {
+                                        if memory_cfg.enabled {
+                                            remember_turn_exchange(
+                                                &memory_store,
+                                                &session,
+                                                turn_ctx.turn_id,
+                                                input,
+                                                finished.user_reply(),
+                                            );
+                                        }
+                                    }
+                                    Err(ref e) if e.contains(USER_CANCELLED_MSG) => {
+                                        messages.truncate(transcript_before);
+                                        cancel_flag.store(false, Ordering::SeqCst);
+                                    }
+                                    Err(_) => {
+                                        // ⑥ 已在编排层 emit_error，继续下一轮
+                                    }
+                                }
+                            }
+                            ControlEvent::ToolResult { .. } => {
+                                tracing::warn!(
+                                    target: cubecode_log::CLI,
+                                    "终端适配器不应直接产出 ToolResult，已忽略"
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
         Ok(())
@@ -224,30 +353,81 @@ fn run_default_chat() -> Result<(), String> {
         if user_text.trim().is_empty() {
             return Err("stdin 为空；终端下直接运行可无参进入对话".to_owned());
         }
-        one_shot_chat(user_text.trim())?;
+        one_shot_chat(user_text.trim(), stream)?;
         Ok(())
     }
 }
 
-fn one_shot_chat(user_text: &str) -> Result<(), String> {
-    let registry = default_registry_from_env();
+fn remember_turn_exchange(
+    store: &cubecode_step::InMemoryRetriever,
+    session: &SessionId,
+    turn_id: TurnId,
+    user_text: &str,
+    assistant_reply: Option<&str>,
+) {
+    store.remember(
+        session,
+        MemoryChunk {
+            id: format!("u-{turn_id}"),
+            content: user_text.to_owned(),
+            source: Some("user".into()),
+        },
+    );
+    if let Some(reply) = assistant_reply.filter(|s| !s.is_empty()) {
+        store.remember(
+            session,
+            MemoryChunk {
+                id: format!("a-{turn_id}"),
+                content: reply.to_owned(),
+                source: Some("assistant".into()),
+            },
+        );
+    }
+}
+
+fn one_shot_chat(user_text: &str, stream: bool) -> Result<(), String> {
+    let mut registry = default_registry_from_env();
+    let memory_cfg = MemoryConfig::from_env();
+    let memory_store = Arc::new(cubecode_step::InMemoryRetriever::new());
+    if memory_cfg.enabled {
+        attach_memory_pipeline(&mut registry, memory_store.clone());
+    }
     let provider = default_provider_from_env();
     let model = default_model_from_env();
     let model_ref = ModelRef::new(provider, model);
-    let messages = vec![ChatMessage::new(MessageRole::User, user_text)];
-    let mut inbox = Inbox::new();
-    let ctx = LlmStepContext {
-        registry: &registry,
-        model: model_ref,
-        messages: &messages,
-    };
-    run_full_turn(
-        1,
+    let mut messages = vec![ChatMessage::new(MessageRole::User, user_text)];
+    let mut inbox = Inbox::with_capacity(cubecode_inbox::capacity_from_env());
+    let session = SessionId::generate();
+    let mut orchestrator = Orchestrator::new(session.clone());
+    let mut session_meta = SessionMetadata::new(session.clone());
+    let turn_ctx = TurnContext::new(session.clone(), TurnId::FIRST);
+    let tools = ToolRegistry::from_env();
+    let runner = TurnRunner::llm(
+        &registry,
+        model_ref,
+        &mut messages,
+        stream,
+        &mut session_meta,
+    );
+    let finished = run_full_turn(
+        &turn_ctx,
+        &mut orchestrator,
         &mut inbox,
         user_text,
-        StepBackend::Llm(ctx),
+        &tools,
+        runner,
         SinkStyle::Assistant,
+        None,
     )?;
+    if memory_cfg.enabled {
+        remember_turn_exchange(
+            &memory_store,
+            &session,
+            turn_ctx.turn_id,
+            user_text,
+            finished.user_reply(),
+        );
+    }
     Ok(())
 }
 

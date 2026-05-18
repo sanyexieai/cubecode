@@ -9,4 +9,6 @@ description = "① Producer/Adapter: raw I/O → semantic events (shell)."
 [dependencies]
 cubecode-contracts = { path = "../cubecode-contracts" }
 cubecode-inbox = { path = "../cubecode-inbox" }
+serde.workspace = true
+serde_json.workspace = true
 tracing.workspace = true

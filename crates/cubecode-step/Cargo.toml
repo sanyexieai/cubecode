@@ -9,4 +9,9 @@ description = "⑤ Step handlers: model/tools/domain steps (shell)."
 [dependencies]
 cubecode-contracts = { path = "../cubecode-contracts" }
 llm-kit = { path = "llm-kit" }
+serde.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

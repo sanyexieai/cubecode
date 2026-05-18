@@ -13,4 +13,10 @@ cubecode-dispatch = { path = "../cubecode-dispatch" }
 cubecode-inbox = { path = "../cubecode-inbox" }
 cubecode-sink = { path = "../cubecode-sink" }
 cubecode-step = { path = "../cubecode-step" }
+serde.workspace = true
+serde_json.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+llm-kit = { path = "../cubecode-step/llm-kit" }

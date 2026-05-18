@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 pub const ENV_LOG_DIR: &str = "CUBECODE_LOG_DIR";
 /// 环境变量：本次运行的会话 id（对应 `{id}.log`）。
 pub const ENV_SESSION: &str = "CUBECODE_SESSION";
+/// 环境变量：设为 `1`/`true` 时 tracing 同时写入 stderr（默认仅写文件）。
+pub const ENV_LOG_STDERR: &str = "CUBECODE_LOG_STDERR";
 
 pub const LATEST_LOG: &str = "latest.log";
 pub const CURRENT_SESSION_FILE: &str = ".current_session";

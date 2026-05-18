@@ -1,8 +1,9 @@
 //! Cubecode 进程级日志初始化（[`tracing-subscriber`]），与各层 [`tracing`] 埋点配合。
 //!
 //! - 在 **二进制入口**（如 `apps/llm-cli`）调用 [`init_from_env`] 或 [`init_cli`] **一次**。
-//! - 日志同时写入 **stderr** 与 **`.cubecode/logs/`**（[`latest.log`] + 当前会话 `{session}.log`）。
-//! - 用 [`show_logs`] / CLI `logs` 子命令查看，语义类似 `docker logs`。
+//! - **默认**仅写入 **`.cubecode/logs/`**（[`latest.log`] + `{session}.log`）；终端聊天界面保持干净。
+//! - 用 [`show_logs`] / CLI `logs -f` 查看全链路日志（类似 `docker logs`）。
+//! - 需要打到控制台时：`-v` / `-vv`、`RUST_LOG=...`，或 `CUBECODE_LOG_STDERR=1`。
 
 mod layers;
 mod paths;
@@ -13,7 +14,8 @@ pub use layers::{ADAPTER as LAYER_ADAPTER, CLI as LAYER_CLI, DISPATCH as LAYER_D
 pub use paths::{
     current_session_marker, ensure_log_dir, latest_log_path, list_session_log_names, log_dir,
     new_session_id, read_current_session, resolve_log_file, resolve_log_file_for_read,
-    session_log_path, write_current_session, ENV_LOG_DIR, ENV_SESSION, LATEST_LOG,
+    session_log_path, write_current_session, ENV_LOG_DIR, ENV_LOG_STDERR, ENV_SESSION,
+    LATEST_LOG,
 };
 pub use tail::{show_logs, LogsOptions};
 
@@ -52,13 +54,17 @@ fn default_filter() -> EnvFilter {
     EnvFilter::new("info,cubecode=info,llm_kit=warn")
 }
 
-/// 在加载 `.env` **之后**调用：优先 `RUST_LOG`，否则 [`default_filter`].
+/// 在加载 `.env` **之后**调用：优先 `RUST_LOG`，否则 [`default_filter`]。
+///
+/// 默认**不写 stderr**（见 [`stderr_enabled`]）；全链路日志进 `.cubecode/logs/`。
 pub fn init_from_env() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| default_filter());
-    init_with_filter(filter);
+    init_with_filter(filter, stderr_enabled(false));
 }
 
 /// 按 CLI 冗长度初始化；若已设置 `RUST_LOG` 则仍以环境变量为准。
+///
+/// `verbosity == 0` 时与 [`init_from_env`] 相同（仅文件）；`-v` 起同时输出到 stderr。
 pub fn init_cli(verbosity: u8) {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         let level = match verbosity {
@@ -68,36 +74,77 @@ pub fn init_cli(verbosity: u8) {
         };
         EnvFilter::new(format!("{level},cubecode={level},llm_kit={level}"))
     });
-    init_with_filter(filter);
+    init_with_filter(filter, stderr_enabled(verbosity > 0));
 }
 
-fn init_with_filter(filter: EnvFilter) {
-    let stderr_layer = tracing_subscriber::fmt::layer().with_writer(io::stderr);
+/// 是否将 tracing 打到 stderr（交互式 CLI 默认关闭）。
+fn stderr_enabled(cli_verbose: bool) -> bool {
+    if cli_verbose {
+        return true;
+    }
+    if std::env::var("RUST_LOG").is_ok() {
+        return true;
+    }
+    std::env::var(ENV_LOG_STDERR)
+        .ok()
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
 
-    let registry = tracing_subscriber::registry()
-        .with(filter)
-        .with(stderr_layer);
-
+fn init_with_filter(filter: EnvFilter, log_to_stderr: bool) {
     match open_log_files() {
         Ok((latest, session)) => {
             let session_id = SESSION_ID.get().map(String::as_str).unwrap_or("").to_owned();
-            let latest_layer = tracing_subscriber::fmt::layer()
-                .with_ansi(false)
-                .with_writer(latest);
-            let session_layer = tracing_subscriber::fmt::layer()
-                .with_ansi(false)
-                .with_writer(session);
-            let _ = registry.with(latest_layer).with(session_layer).try_init();
-            tracing::info!(
+            let _ = if log_to_stderr {
+                tracing_subscriber::registry()
+                    .with(filter)
+                    .with(tracing_subscriber::fmt::layer().with_writer(io::stderr))
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .with_ansi(false)
+                            .with_writer(latest.clone()),
+                    )
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .with_ansi(false)
+                            .with_writer(session.clone()),
+                    )
+                    .try_init()
+            } else {
+                tracing_subscriber::registry()
+                    .with(filter)
+                    .with(tracing_subscriber::fmt::layer().with_writer(io::sink))
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .with_ansi(false)
+                            .with_writer(latest),
+                    )
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .with_ansi(false)
+                            .with_writer(session),
+                    )
+                    .try_init()
+            };
+            tracing::debug!(
                 target: CLI,
                 session = %session_id,
                 dir = %log_dir().display(),
+                log_to_stderr,
                 "文件日志已启用"
             );
         }
         Err(e) => {
             eprintln!("cubecode-log: 无法启用文件日志: {e}");
-            let _ = registry.try_init();
+            let _ = tracing_subscriber::registry()
+                .with(filter)
+                .with(tracing_subscriber::fmt::layer().with_writer(io::stderr))
+                .try_init();
         }
     }
 }
