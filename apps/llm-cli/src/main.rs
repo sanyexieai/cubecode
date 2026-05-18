@@ -20,9 +20,9 @@ use cubecode_orchestrator::{
 };
 use cubecode_sink::emit_error_global;
 use cubecode_step::{
-    attach_memory_pipeline, MemoryChunk, MemoryConfig, ToolRegistry, ENV_MEMORY_ENABLED,
+    attach_memory_store, memory_store_from_config, MemoryChunk, MemoryConfig, MemoryStore,
+    ToolRegistry, ENV_MEMORY_ENABLED, ENV_MEMORY_STORAGE,
 };
-use std::sync::Arc;
 use llm_kit::{
     default_model_from_env, default_provider_from_env, default_registry_from_env,
     provider_presets, ChatMessage, MessageRole, ModelRef, WireProtocol,
@@ -233,13 +233,16 @@ fn run_default_chat(stream: bool) -> Result<(), String> {
         let model_ref = ModelRef::new(provider, model);
         let mut registry = default_registry_from_env();
         let memory_cfg = MemoryConfig::from_env();
-        let memory_store = Arc::new(cubecode_step::InMemoryRetriever::new());
-        if memory_cfg.enabled {
-            attach_memory_pipeline(&mut registry, memory_store.clone());
+        let memory_store = memory_store_from_config(&memory_cfg).map_err(|e| e.to_string())?;
+        if let Some(store) = &memory_store {
+            attach_memory_store(&mut registry, store.clone());
             tracing::info!(
                 target: cubecode_log::CLI,
                 top_k = memory_cfg.top_k,
+                storage = memory_cfg.storage.as_str(),
+                path = %memory_cfg.storage_path.display(),
                 env = ENV_MEMORY_ENABLED,
+                storage_env = ENV_MEMORY_STORAGE,
                 "记忆召回已启用"
             );
         }
@@ -317,9 +320,9 @@ fn run_default_chat(stream: bool) -> Result<(), String> {
                                     Some(cancel_flag.as_ref()),
                                 ) {
                                     Ok(finished) => {
-                                        if memory_cfg.enabled {
+                                        if let Some(store) = &memory_store {
                                             remember_turn_exchange(
-                                                &memory_store,
+                                                store.as_ref(),
                                                 &session,
                                                 turn_ctx.turn_id,
                                                 input,
@@ -359,38 +362,42 @@ fn run_default_chat(stream: bool) -> Result<(), String> {
 }
 
 fn remember_turn_exchange(
-    store: &cubecode_step::InMemoryRetriever,
+    store: &dyn MemoryStore,
     session: &SessionId,
     turn_id: TurnId,
     user_text: &str,
     assistant_reply: Option<&str>,
 ) {
-    store.remember(
+    if let Err(e) = store.remember(
         session,
         MemoryChunk {
             id: format!("u-{turn_id}"),
             content: user_text.to_owned(),
             source: Some("user".into()),
         },
-    );
+    ) {
+        tracing::warn!(target: "cubecode.cli", %e, "写入用户记忆失败");
+    }
     if let Some(reply) = assistant_reply.filter(|s| !s.is_empty()) {
-        store.remember(
+        if let Err(e) = store.remember(
             session,
             MemoryChunk {
                 id: format!("a-{turn_id}"),
                 content: reply.to_owned(),
                 source: Some("assistant".into()),
             },
-        );
+        ) {
+            tracing::warn!(target: "cubecode.cli", %e, "写入助手记忆失败");
+        }
     }
 }
 
 fn one_shot_chat(user_text: &str, stream: bool) -> Result<(), String> {
     let mut registry = default_registry_from_env();
     let memory_cfg = MemoryConfig::from_env();
-    let memory_store = Arc::new(cubecode_step::InMemoryRetriever::new());
-    if memory_cfg.enabled {
-        attach_memory_pipeline(&mut registry, memory_store.clone());
+    let memory_store = memory_store_from_config(&memory_cfg).map_err(|e| e.to_string())?;
+    if let Some(store) = &memory_store {
+        attach_memory_store(&mut registry, store.clone());
     }
     let provider = default_provider_from_env();
     let model = default_model_from_env();
@@ -419,9 +426,9 @@ fn one_shot_chat(user_text: &str, stream: bool) -> Result<(), String> {
         SinkStyle::Assistant,
         None,
     )?;
-    if memory_cfg.enabled {
+    if let Some(store) = &memory_store {
         remember_turn_exchange(
-            &memory_store,
+            store.as_ref(),
             &session,
             turn_ctx.turn_id,
             user_text,

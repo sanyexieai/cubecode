@@ -1,22 +1,434 @@
-   0.113988400s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint: stale: changed "D:\\code\\cubecode\\crates\\cubecode-adapter\\src\\lib.rs"
-   0.114019200s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint:           (vs) "D:\\code\\cubecode\\target\\debug\\.fingerprint\\cubecode-adapter-a903e5787f79eb4a\\dep-lib-cubecode_adapter"
-   0.114024200s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13423569532, nanos: 193582500 } < FileTime { seconds: 13423569533, nanos: 865318900 }
-   0.114147800s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint: fingerprint dirty for cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cubecode_adapter", ["lib"], "D:\\code\\cubecode\\crates\\cubecode-adapter\\src\\lib.rs", Edition2021) }
-   0.114175100s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "D:\\code\\cubecode\\target\\debug\\.fingerprint\\cubecode-adapter-a903e5787f79eb4a\\dep-lib-cubecode_adapter", reference_mtime: FileTime { seconds: 13423569532, nanos: 193582500 }, stale: "D:\\code\\cubecode\\crates\\cubecode-adapter\\src\\lib.rs", stale_mtime: FileTime { seconds: 13423569533, nanos: 865318900 } }))
-   0.119013700s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint: stale: changed "D:\\code\\cubecode\\crates\\cubecode-adapter\\src\\lib.rs"
-   0.119044700s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint:           (vs) "D:\\code\\cubecode\\target\\debug\\.fingerprint\\cubecode-adapter-fb49efb1a73326d2\\dep-test-lib-cubecode_adapter"
-   0.119049100s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13423569532, nanos: 193582500 } < FileTime { seconds: 13423569533, nanos: 865318900 }
-   0.119157800s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint: fingerprint dirty for cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("cubecode_adapter", ["lib"], "D:\\code\\cubecode\\crates\\cubecode-adapter\\src\\lib.rs", Edition2021) }
-   0.119173300s  INFO prepare_target{force=false package_id=cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter) target="cubecode_adapter"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "D:\\code\\cubecode\\target\\debug\\.fingerprint\\cubecode-adapter-fb49efb1a73326d2\\dep-test-lib-cubecode_adapter", reference_mtime: FileTime { seconds: 13423569532, nanos: 193582500 }, stale: "D:\\code\\cubecode\\crates\\cubecode-adapter\\src\\lib.rs", stale_mtime: FileTime { seconds: 13423569533, nanos: 865318900 } }))
-   0.130074900s  INFO prepare_target{force=false package_id=cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator) target="cubecode_orchestrator"}: cargo::core::compiler::fingerprint: fingerprint dirty for cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cubecode_orchestrator", ["lib"], "D:\\code\\cubecode\\crates\\cubecode-orchestrator\\src\\lib.rs", Edition2021) }
-   0.130113300s  INFO prepare_target{force=false package_id=cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator) target="cubecode_orchestrator"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { name: "cubecode_adapter" })
-   0.157481600s  INFO prepare_target{force=false package_id=cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator) target="cubecode_orchestrator"}: cargo::core::compiler::fingerprint: fingerprint dirty for cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("cubecode_orchestrator", ["lib"], "D:\\code\\cubecode\\crates\\cubecode-orchestrator\\src\\lib.rs", Edition2021) }
-   0.157533100s  INFO prepare_target{force=false package_id=cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator) target="cubecode_orchestrator"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { name: "cubecode_adapter" })
-   0.167620600s  INFO prepare_target{force=false package_id=llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli) target="llm-kit"}: cargo::core::compiler::fingerprint: fingerprint dirty for llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli)/Check { test: false }/TargetInner { name: "llm-kit", doc: true, ..: with_path("D:\\code\\cubecode\\apps\\llm-cli\\src\\main.rs", Edition2021) }
-   0.167669400s  INFO prepare_target{force=false package_id=llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli) target="llm-kit"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { name: "cubecode_adapter" })
-   0.173922900s  INFO prepare_target{force=false package_id=llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli) target="llm-kit"}: cargo::core::compiler::fingerprint: fingerprint dirty for llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli)/Check { test: true }/TargetInner { name: "llm-kit", doc: true, ..: with_path("D:\\code\\cubecode\\apps\\llm-cli\\src\\main.rs", Edition2021) }
-   0.173951100s  INFO prepare_target{force=false package_id=llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli) target="llm-kit"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { name: "cubecode_adapter" })
-    Checking cubecode-adapter v0.1.0 (D:\code\cubecode\crates\cubecode-adapter)
-    Checking cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator)
-    Checking llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.29s
+   0.151646900s  INFO prepare_target{force=false package_id=cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator) target="cubecode_orchestrator"}: cargo::core::compiler::fingerprint: fingerprint error for cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cubecode_orchestrator", ["lib"], "D:\\code\\cubecode\\crates\\cubecode-orchestrator\\src\\lib.rs", Edition2021) }
+   0.151705800s  INFO prepare_target{force=false package_id=cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator) target="cubecode_orchestrator"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\cubecode-orchestrator-0d67f1c44f3817de\lib-cubecode_orchestrator`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.159175800s  INFO prepare_target{force=false package_id=cubecode-step v0.1.0 (D:\code\cubecode\crates\cubecode-step) target="cubecode_step"}: cargo::core::compiler::fingerprint: fingerprint error for cubecode-step v0.1.0 (D:\code\cubecode\crates\cubecode-step)/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cubecode_step", ["lib"], "D:\\code\\cubecode\\crates\\cubecode-step\\src\\lib.rs", Edition2021) }
+   0.159199200s  INFO prepare_target{force=false package_id=cubecode-step v0.1.0 (D:\code\cubecode\crates\cubecode-step) target="cubecode_step"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\cubecode-step-9e2d8995dc5c09bf\lib-cubecode_step`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_libgit2_prerelease
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: git_midx_writer_dump
+  18: git_filter_source_repo
+  19: git_midx_writer_dump
+  20: BaseThreadInitThunk
+  21: RtlUserThreadStart
+   0.171401600s  INFO prepare_target{force=false package_id=rusqlite v0.32.1 target="rusqlite"}: cargo::core::compiler::fingerprint: fingerprint error for rusqlite v0.32.1/Check { test: false }/TargetInner { ..: lib_target("rusqlite", ["lib"], "C:\\Users\\sanye\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\rusqlite-0.32.1\\src\\lib.rs", Edition2021) }
+   0.171430400s  INFO prepare_target{force=false package_id=rusqlite v0.32.1 target="rusqlite"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\rusqlite-3374c024a11d7812\lib-rusqlite`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_libgit2_prerelease
+  14: <unknown>
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: git_midx_writer_dump
+  19: git_filter_source_repo
+  20: git_midx_writer_dump
+  21: BaseThreadInitThunk
+  22: RtlUserThreadStart
+   0.171903400s  INFO prepare_target{force=false package_id=fallible-iterator v0.3.0 target="fallible_iterator"}: cargo::core::compiler::fingerprint: fingerprint error for fallible-iterator v0.3.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("fallible_iterator", ["lib"], "C:\\Users\\sanye\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\fallible-iterator-0.3.0\\src\\lib.rs", Edition2018) }
+   0.171926000s  INFO prepare_target{force=false package_id=fallible-iterator v0.3.0 target="fallible_iterator"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\fallible-iterator-247ecd03dac03034\lib-fallible_iterator`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.208494800s  INFO prepare_target{force=false package_id=fallible-streaming-iterator v0.1.9 target="fallible_streaming_iterator"}: cargo::core::compiler::fingerprint: fingerprint error for fallible-streaming-iterator v0.1.9/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("fallible_streaming_iterator", ["lib"], "C:\\Users\\sanye\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\fallible-streaming-iterator-0.1.9\\src\\lib.rs", Edition2015) }
+   0.208537000s  INFO prepare_target{force=false package_id=fallible-streaming-iterator v0.1.9 target="fallible_streaming_iterator"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\fallible-streaming-iterator-55f5b5f69c554172\lib-fallible_streaming_iterator`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.209060800s  INFO prepare_target{force=false package_id=hashlink v0.9.1 target="hashlink"}: cargo::core::compiler::fingerprint: fingerprint error for hashlink v0.9.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hashlink", ["lib"], "C:\\Users\\sanye\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\hashlink-0.9.1\\src\\lib.rs", Edition2018) }
+   0.209083300s  INFO prepare_target{force=false package_id=hashlink v0.9.1 target="hashlink"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\hashlink-6acba571652abcf6\lib-hashlink`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.209538800s  INFO prepare_target{force=false package_id=hashbrown v0.14.5 target="hashbrown"}: cargo::core::compiler::fingerprint: fingerprint error for hashbrown v0.14.5/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("hashbrown", ["lib"], "C:\\Users\\sanye\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\hashbrown-0.14.5\\src\\lib.rs", Edition2021) }
+   0.209558900s  INFO prepare_target{force=false package_id=hashbrown v0.14.5 target="hashbrown"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\hashbrown-fbd85ffad2237a1e\lib-hashbrown`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_libgit2_prerelease
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: git_midx_writer_dump
+  21: git_filter_source_repo
+  22: git_midx_writer_dump
+  23: BaseThreadInitThunk
+  24: RtlUserThreadStart
+   0.209977300s  INFO prepare_target{force=false package_id=ahash v0.8.12 target="ahash"}: cargo::core::compiler::fingerprint: fingerprint error for ahash v0.8.12/Check { test: false }/TargetInner { ..: lib_target("ahash", ["lib"], "C:\\Users\\sanye\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\ahash-0.8.12\\src\\lib.rs", Edition2018) }
+   0.209996200s  INFO prepare_target{force=false package_id=ahash v0.8.12 target="ahash"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\ahash-cb76d580aa7d2ffb\lib-ahash`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_libgit2_prerelease
+  17: <unknown>
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: git_midx_writer_dump
+  22: git_filter_source_repo
+  23: git_midx_writer_dump
+  24: BaseThreadInitThunk
+  25: RtlUserThreadStart
+   0.211328400s  INFO prepare_target{force=false package_id=zerocopy v0.8.48 target="zerocopy"}: cargo::core::compiler::fingerprint: fingerprint error for zerocopy v0.8.48/Check { test: false }/TargetInner { ..: lib_target("zerocopy", ["lib"], "C:\\Users\\sanye\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\zerocopy-0.8.48\\src\\lib.rs", Edition2021) }
+   0.211349900s  INFO prepare_target{force=false package_id=zerocopy v0.8.48 target="zerocopy"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\zerocopy-2a9b4aca0d18fe73\lib-zerocopy`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_filter_source_repo
+  15: git_filter_source_repo
+  16: git_filter_source_repo
+  17: git_libgit2_prerelease
+  18: <unknown>
+  19: <unknown>
+  20: <unknown>
+  21: <unknown>
+  22: git_midx_writer_dump
+  23: git_filter_source_repo
+  24: git_midx_writer_dump
+  25: BaseThreadInitThunk
+  26: RtlUserThreadStart
+   0.212235200s  INFO prepare_target{force=false package_id=libsqlite3-sys v0.30.1 target="libsqlite3_sys"}: cargo::core::compiler::fingerprint: fingerprint error for libsqlite3-sys v0.30.1/Check { test: false }/TargetInner { ..: lib_target("libsqlite3_sys", ["lib"], "C:\\Users\\sanye\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\libsqlite3-sys-0.30.1\\src\\lib.rs", Edition2021) }
+   0.212249500s  INFO prepare_target{force=false package_id=libsqlite3-sys v0.30.1 target="libsqlite3_sys"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\libsqlite3-sys-87516864dfef0b7a\lib-libsqlite3_sys`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_filter_source_repo
+  12: git_filter_source_repo
+  13: git_filter_source_repo
+  14: git_libgit2_prerelease
+  15: <unknown>
+  16: <unknown>
+  17: <unknown>
+  18: <unknown>
+  19: git_midx_writer_dump
+  20: git_filter_source_repo
+  21: git_midx_writer_dump
+  22: BaseThreadInitThunk
+  23: RtlUserThreadStart
+   0.214052500s  INFO prepare_target{force=false package_id=cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator) target="cubecode_orchestrator"}: cargo::core::compiler::fingerprint: fingerprint error for cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("cubecode_orchestrator", ["lib"], "D:\\code\\cubecode\\crates\\cubecode-orchestrator\\src\\lib.rs", Edition2021) }
+   0.214076900s  INFO prepare_target{force=false package_id=cubecode-orchestrator v0.1.0 (D:\code\cubecode\crates\cubecode-orchestrator) target="cubecode_orchestrator"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\cubecode-orchestrator-10f718c50cee0fd1\test-lib-cubecode_orchestrator`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.215820400s  INFO prepare_target{force=false package_id=cubecode-step v0.1.0 (D:\code\cubecode\crates\cubecode-step) target="cubecode_step"}: cargo::core::compiler::fingerprint: fingerprint error for cubecode-step v0.1.0 (D:\code\cubecode\crates\cubecode-step)/Check { test: true }/TargetInner { name_inferred: true, ..: lib_target("cubecode_step", ["lib"], "D:\\code\\cubecode\\crates\\cubecode-step\\src\\lib.rs", Edition2021) }
+   0.215837100s  INFO prepare_target{force=false package_id=cubecode-step v0.1.0 (D:\code\cubecode\crates\cubecode-step) target="cubecode_step"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\cubecode-step-ea56211ebd463124\test-lib-cubecode_step`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.218241700s  INFO prepare_target{force=false package_id=llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli) target="llm-kit"}: cargo::core::compiler::fingerprint: fingerprint error for llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli)/Check { test: false }/TargetInner { name: "llm-kit", doc: true, ..: with_path("D:\\code\\cubecode\\apps\\llm-cli\\src\\main.rs", Edition2021) }
+   0.218260000s  INFO prepare_target{force=false package_id=llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli) target="llm-kit"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\llm-cli-192d08c39ac58ea5\bin-llm-kit`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+   0.221337500s  INFO prepare_target{force=false package_id=llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli) target="llm-kit"}: cargo::core::compiler::fingerprint: fingerprint error for llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli)/Check { test: true }/TargetInner { name: "llm-kit", doc: true, ..: with_path("D:\\code\\cubecode\\apps\\llm-cli\\src\\main.rs", Edition2021) }
+   0.221355600s  INFO prepare_target{force=false package_id=llm-cli v0.1.0 (D:\code\cubecode\apps\llm-cli) target="llm-kit"}: cargo::core::compiler::fingerprint:     err: failed to read `D:\code\cubecode\target\debug\.fingerprint\llm-cli-08284e3476dfb0c6\test-bin-llm-kit`
+
+Caused by:
+    系统找不到指定的文件。 (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+    Checking zerocopy v0.8.48
+    Checking fallible-streaming-iterator v0.1.9
+    Checking fallible-iterator v0.3.0
+    Checking libsqlite3-sys v0.30.1
+    Checking ahash v0.8.12
+    Checking hashbrown v0.14.5
+    Checking hashlink v0.9.1
+    Checking rusqlite v0.32.1
+    Checking cubecode-step v0.1.0 (D:\code\cubecode\crates\cubecode-step)
+error: could not compile `cubecode-step` (lib) due to 4 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `cubecode-step` (lib test) due to 9 previous errors

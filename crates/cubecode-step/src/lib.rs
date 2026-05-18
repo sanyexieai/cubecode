@@ -10,11 +10,15 @@ use cubecode_contracts::{ControlEvent, TurnContext};
 
 pub use llm_kit::{ChatMessage, MessageRole, ModelRef, ProviderRegistry};
 pub use memory::{
-    apply_memory_recall, attach_memory_pipeline, memory_enabled_from_env, memory_pipeline,
-    memory_top_k_from_env, stamp_request_metadata, InMemoryRetriever, MemoryChunk, MemoryConfig,
-    MemoryError, MemoryHit, MemoryQuery, MemoryRecallStage, MemoryRetrieveResult, MemoryRetriever,
-    NoopRetriever, DEFAULT_TOP_K, ENV_MEMORY_ENABLED, ENV_MEMORY_TOP_K, META_MEMORY_HIT_COUNT,
-    META_MEMORY_INJECTED_BYTES, META_MEMORY_TOP_K, META_SESSION_ID, META_TURN_ID, META_USER_TEXT,
+    apply_memory_recall, attach_memory_pipeline, attach_memory_store, default_storage_root,
+    memory_enabled_from_env, memory_pipeline, memory_storage_mode_from_env,
+    memory_storage_path_from_env,
+    memory_store_from_config, memory_top_k_from_env, stamp_request_metadata, InMemoryRetriever,
+    MemoryChunk, MemoryConfig, MemoryError, MemoryHit, MemoryQuery, MemoryRecallStage,
+    MemoryRetrieveResult, MemoryRetriever, MemoryStorageMode, MemoryStore, NoopRetriever,
+    DEFAULT_TOP_K, ENV_MEMORY_ENABLED, ENV_MEMORY_PATH, ENV_MEMORY_STORAGE,
+    ENV_MEMORY_TOP_K, META_MEMORY_HIT_COUNT, META_MEMORY_INJECTED_BYTES, META_MEMORY_TOP_K,
+    META_SESSION_ID, META_TURN_ID, META_USER_TEXT,
 };
 pub use tools::{ToolError, ToolRegistry};
 pub use transcript::{

@@ -10,7 +10,7 @@ use llm_kit::{
 
 use super::config::META_MEMORY_TOP_K;
 use super::error::MemoryError;
-use super::retriever::MemoryRetriever;
+use super::store::MemoryStore;
 use super::types::{MemoryQuery, MemoryRetrieveResult};
 
 /// 写入 [`GenerateRequest::metadata`]，供本阶段与 M5-3 编排层使用。
@@ -46,7 +46,7 @@ pub fn stamp_request_metadata(
 /// 根据 metadata 与消息列表执行召回，并把结果注入 `request.messages`。
 pub fn apply_memory_recall(
     request: &mut GenerateRequest,
-    retriever: &dyn MemoryRetriever,
+    store: &dyn MemoryStore,
 ) -> Result<(), MemoryError> {
     let Some(session_key) = request.metadata.get(META_SESSION_ID).cloned() else {
         tracing::debug!(
@@ -74,7 +74,7 @@ pub fn apply_memory_recall(
     let user_text_bytes = user_text.len();
     let top_k = top_k_from_metadata(&request.metadata);
     let query = MemoryQuery::new(&session, user_text).with_top_k(top_k);
-    let MemoryRetrieveResult { hits } = retriever.retrieve(&query)?;
+    let MemoryRetrieveResult { hits } = store.retrieve(&query)?;
 
     request.metadata.insert(
         META_MEMORY_HIT_COUNT.into(),
@@ -85,7 +85,7 @@ pub fn apply_memory_recall(
         tracing::info!(
             target: "cubecode.step.memory",
             session_id = %session_key,
-            retriever = retriever.id(),
+            storage = store.id(),
             top_k,
             user_text_bytes,
             "pipeline：记忆召回完成（无命中）"
@@ -108,7 +108,7 @@ pub fn apply_memory_recall(
     tracing::info!(
         target: "cubecode.step.memory",
         session_id = %session_key,
-        retriever = retriever.id(),
+        storage = store.id(),
         top_k,
         user_text_bytes,
         hits = hits.len(),
@@ -178,12 +178,12 @@ fn inject_memory_block(messages: &mut Vec<ChatMessage>, block: &str) {
 
 /// 记忆召回 pipeline 阶段。
 pub struct MemoryRecallStage {
-    retriever: Arc<dyn MemoryRetriever>,
+    store: Arc<dyn MemoryStore>,
 }
 
 impl MemoryRecallStage {
-    pub fn new(retriever: Arc<dyn MemoryRetriever>) -> Self {
-        Self { retriever }
+    pub fn new(store: Arc<dyn MemoryStore>) -> Self {
+        Self { store }
     }
 }
 
@@ -193,24 +193,25 @@ impl PipelineStage for MemoryRecallStage {
     }
 
     fn before_generate(&self, ctx: &mut PipelineContext) -> Result<(), LlmError> {
-        apply_memory_recall(&mut ctx.request, self.retriever.as_ref())
+        apply_memory_recall(&mut ctx.request, self.store.as_ref())
             .map_err(|e| LlmError::InvalidRequest(e.to_string()))
     }
 }
 
 /// 仅含记忆召回的 pipeline。
-pub fn memory_pipeline(retriever: Arc<dyn MemoryRetriever>) -> Pipeline {
+pub fn memory_pipeline(store: Arc<dyn MemoryStore>) -> Pipeline {
     PipelineBuilder::default()
-        .push(MemoryRecallStage::new(retriever))
+        .push(MemoryRecallStage::new(store))
         .build()
 }
 
 /// 在 registry 上挂载记忆召回（会**替换**已有 pipeline）。
-pub fn attach_memory_pipeline(registry: &mut ProviderRegistry, retriever: Arc<dyn MemoryRetriever>) {
-    registry.set_pipeline(Some(memory_pipeline(retriever)));
+pub fn attach_memory_pipeline(registry: &mut ProviderRegistry, store: Arc<dyn MemoryStore>) {
+    let storage_id = store.id();
+    registry.set_pipeline(Some(memory_pipeline(store)));
     tracing::info!(
         target: "cubecode.step.memory",
-        top_k = super::config::memory_top_k_from_env(),
+        storage = storage_id,
         "已挂载记忆召回 pipeline"
     );
 }
@@ -218,7 +219,7 @@ pub fn attach_memory_pipeline(registry: &mut ProviderRegistry, retriever: Arc<dy
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{InMemoryRetriever, MemoryChunk, NoopRetriever};
+    use crate::{InMemoryRetriever, MemoryChunk, MemoryStore, NoopRetriever};
     use cubecode_contracts::TurnId;
     use llm_kit::ModelRef;
 
@@ -226,14 +227,16 @@ mod tests {
     fn apply_memory_injects_system_message() {
         let session = SessionId::new("s-inject");
         let store = InMemoryRetriever::new();
-        store.remember(
-            &session,
-            MemoryChunk {
-                id: "m1".into(),
-                content: "本项目使用 Rust 开发".into(),
-                source: Some("doc".into()),
-            },
-        );
+        store
+            .remember(
+                &session,
+                MemoryChunk {
+                    id: "m1".into(),
+                    content: "本项目使用 Rust 开发".into(),
+                    source: Some("doc".into()),
+                },
+            )
+            .expect("remember");
         let mut request = GenerateRequest::new(
             ModelRef::new("p", "m"),
             vec![ChatMessage::new(MessageRole::User, "Rust 开发")],
@@ -252,15 +255,17 @@ mod tests {
     #[test]
     fn pipeline_stage_delegates_to_apply() {
         let session = SessionId::new("s-stage");
-        let store = Arc::new(InMemoryRetriever::new());
-        store.remember(
-            &session,
-            MemoryChunk {
-                id: "a".into(),
-                content: "关键事实".into(),
-                source: None,
-            },
-        );
+        let store: Arc<dyn MemoryStore> = Arc::new(InMemoryRetriever::new());
+        store
+            .remember(
+                &session,
+                MemoryChunk {
+                    id: "a".into(),
+                    content: "关键事实".into(),
+                    source: None,
+                },
+            )
+            .expect("remember");
         let stage = MemoryRecallStage::new(store);
         let mut ctx = PipelineContext::new(GenerateRequest::new(
             ModelRef::new("p", "m"),
@@ -280,14 +285,16 @@ mod tests {
         let session = SessionId::new("s-topk");
         let store = InMemoryRetriever::new();
         for i in 0..4 {
-            store.remember(
-                &session,
-                MemoryChunk {
-                    id: format!("m{i}"),
-                    content: format!("关键词条目 {i}"),
-                    source: None,
-                },
-            );
+            store
+                .remember(
+                    &session,
+                    MemoryChunk {
+                        id: format!("m{i}"),
+                        content: format!("关键词条目 {i}"),
+                        source: None,
+                    },
+                )
+                .expect("remember");
         }
         let mut request = GenerateRequest::new(
             ModelRef::new("p", "m"),

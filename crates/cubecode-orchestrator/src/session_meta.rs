@@ -146,6 +146,8 @@ mod tests {
             MemoryConfig {
                 enabled: true,
                 top_k: 7,
+                storage: cubecode_step::MemoryStorageMode::Memory,
+                storage_path: cubecode_step::default_storage_root(),
             },
         );
         let ctx = TurnContext::new(session, TurnId::FIRST);
