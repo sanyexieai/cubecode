@@ -8,3 +8,4 @@ description = "③ Dispatcher: event type → handler routing (shell)."
 
 [dependencies]
 cubecode-contracts = { path = "../cubecode-contracts" }
+tracing.workspace = true

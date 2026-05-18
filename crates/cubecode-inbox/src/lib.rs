@@ -1,4 +1,4 @@
-//! ② **Inbox**：进程内 FIFO 占位；后续可换有界 channel / 跨线程队列。
+//! ② **收件箱**：进程内 FIFO 队列。
 
 use std::collections::VecDeque;
 
@@ -16,11 +16,25 @@ impl Inbox {
     }
 
     pub fn push(&mut self, event: ControlEvent) {
+        tracing::info!(
+            target: "cubecode.inbox",
+            len_after = self.q.len() + 1,
+            ?event,
+            "②收件箱：入队"
+        );
         self.q.push_back(event);
     }
 
     pub fn pop(&mut self) -> Option<ControlEvent> {
-        self.q.pop_front()
+        let event = self.q.pop_front();
+        tracing::info!(
+            target: "cubecode.inbox",
+            len_after = self.q.len(),
+            popped = event.is_some(),
+            ?event,
+            "②收件箱：出队"
+        );
+        event
     }
 
     pub fn len(&self) -> usize {

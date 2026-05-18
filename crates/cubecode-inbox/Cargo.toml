@@ -8,3 +8,4 @@ description = "② Inbox queue: backpressure, ordering, shutdown (shell)."
 
 [dependencies]
 cubecode-contracts = { path = "../cubecode-contracts" }
+tracing.workspace = true

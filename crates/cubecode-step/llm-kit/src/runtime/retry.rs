@@ -54,7 +54,7 @@ impl LlmRetryPolicy {
             max_attempts = self.max_attempts,
             error = %error,
             retry_delay_ms = delay.as_millis(),
-            "llm retry scheduled"
+            "大模型请求将重试"
         );
     }
 }
